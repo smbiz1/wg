@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+.env
+*.log
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Tauri
+**/target/
+**/Cargo.lock
+
+# Build outputs
+**/dist/
+**/bundle/
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.msi
+
+# IDE
+.vscode/
+.idea/
+.ai/
+.cursor/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# WireGuard configs (sensitive!)
+*.conf
+
+# Secrets
+.env
+*.pem
+*.key
+
+# Reference and archive folders
+_ref/
+_arch/
+
+# Cloudflare Workers
+.wrangler/
+*.dev.vars
+
+# Python UV
+.uv/
+.venv/
+venv/
+ENV/
