@@ -1,30 +1,44 @@
-# fly.toml app configuration file generated for private-network-router on 2025-05-16T12:21:37-05:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+# fly.toml for Tailscale-enabled Fly.io application
+# See https://fly.io/docs/reference/configuration/
+# See https://tailscale.com/kb/1132/flydotio
 
-app = 'private-network-router'
-primary_region = 'atl'
+app = 'tailscale-app'
+primary_region = 'iad'  # Change to your preferred region
 
 [build]
+  dockerfile = "Dockerfile"
 
-[http_service]
-  internal_port = 3004
-
+# Health check endpoint (optional - for Fly.io monitoring)
+# The app will be accessible via Tailscale, not public HTTP
 [[services]]
   protocol = 'tcp'
   internal_port = 3004
   processes = ['app']
 
+  # Optional: Minimal health check (remove if not needed)
   [[services.ports]]
     port = 3004
     handlers = ['http']
+    force_https = false  # Since this will be private via Tailscale
 
-  [[services.ports]]
-    port = 8080
-    handlers = ['http']
-
+# VM configuration - adjust based on your app needs
 [[vm]]
   memory = '256mb'
   cpu_kind = 'shared'
   cpus = 1
+
+# Environment variables (set via flyctl secrets)
+# TAILSCALE_AUTHKEY - Your Tailscale auth key (set with: flyctl secrets set TAILSCALE_AUTHKEY="tskey-...")
+
+# Optional: Mount for persistent data (if your app needs it)
+# [[mounts]]
+#   source = "tailscale_data"
+#   destination = "/var/lib/tailscale"
+
+# Optional: Health checks
+[checks.health]
+  port = 3004
+  type = "http"
+  interval = "10s"
+  timeout = "2s"
+  path = "/health"

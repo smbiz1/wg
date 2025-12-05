@@ -1,0 +1,15 @@
+{
+  "name": "tailscale-fly-app",
+  "version": "1.0.0",
+  "description": "Sample application demonstrating Tailscale connectivity on Fly.io",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "keywords": ["tailscale", "fly.io", "docker"],
+  "author": "",
+  "license": "MIT"
+}
