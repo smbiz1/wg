@@ -72,13 +72,36 @@ curl http://your-tailscale-ip:3004/
 
 ## 🌐 Usage Examples
 
+### Accessing Other Fly.io Machines
+
+Once your `fly-ts` app is deployed, you can use it as a gateway to access other Fly.io applications in your private network:
+
+1. **Test Internal Connectivity**: Use `/fly-internal-test` to verify your app can reach other Fly apps
+2. **Proxy Requests**: Use `/proxy/:appName/:port/*` to route HTTP requests to other Fly apps
+3. **Direct Access**: Your Tailscale-connected machines can now reach any Fly app through this gateway
+
+**Example workflow:**
+```bash
+# From your Oracle VM (connected via Tailscale):
+# 1. Test that fly-ts can reach your other Fly apps
+curl http://fly-ts-tailscale-ip:3004/fly-internal-test
+
+# 2. Access another Fly app's API through the proxy
+curl http://fly-ts-tailscale-ip:3004/proxy/my-other-app/3004/api/data
+
+# 3. Check health of other Fly apps
+curl http://fly-ts-tailscale-ip:3004/proxy/my-other-app/3004/health
+```
+
+**Note**: Replace `my-other-app` with the actual name of your other Fly.io applications.
+
 ### From Your Oracle VMs
 
 ```bash
 # Get the Tailscale IP of your Fly.io app
 # (check flyctl logs or app output)
 
-# Test connectivity
+# Test basic connectivity
 curl http://fly-app-tailscale-ip:3004/
 
 # Access the Oracle VM test endpoint
@@ -86,6 +109,13 @@ curl http://fly-app-tailscale-ip:3004/oracle-test
 
 # Check Tailscale status
 curl http://fly-app-tailscale-ip:3004/tailscale
+
+# Test internal Fly.io network connectivity
+curl http://fly-app-tailscale-ip:3004/fly-internal-test
+
+# Proxy to other Fly apps in your private network
+# Replace 'other-app-name' with the actual app name
+curl http://fly-app-tailscale-ip:3004/proxy/other-app-name/3004/health
 ```
 
 ### API Endpoints
@@ -95,6 +125,8 @@ curl http://fly-app-tailscale-ip:3004/tailscale
 - **`GET /tailscale`** - Detailed Tailscale network information
 - **`GET /oracle-test`** - Specific test for Oracle VM connectivity
 - **`GET /network-test`** - Network connectivity information
+- **`GET /fly-internal-test`** - Test connectivity to other Fly.io apps in private network
+- **`GET /proxy/:appName/:port/*`** - Proxy requests to other Fly.io apps (e.g., `/proxy/myapp/3004/health`)
 
 ## 🔒 Security Notes
 
@@ -102,6 +134,8 @@ curl http://fly-app-tailscale-ip:3004/tailscale
 - Uses ephemeral Tailscale nodes for automatic cleanup
 - No public HTTP endpoints (unlike typical web apps)
 - All communication is encrypted via Tailscale/WireGuard
+- Can proxy requests to other Fly.io apps in your private network
+- Internal Fly.io communication uses IPv6 6PN (private network)
 
 ## 🐛 Troubleshooting
 
