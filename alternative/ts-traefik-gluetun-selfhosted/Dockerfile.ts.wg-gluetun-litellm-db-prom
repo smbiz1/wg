@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # VPN container for secure connections
+  vpn:
+    image: ghcr.io/qdm12/gluetun:latest
+    container_name: vpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${WG_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${WG_ADDRESSES}
+      - WIREGUARD_PUBLIC_KEY=${WG_PUBLIC_KEY}
+      - WIREGUARD_ENDPOINT=${WG_ENDPOINT}
+      - WIREGUARD_ALLOWED_IPS=0.0.0.0/0,::/0  # Route all traffic
+      - FIREWALL=off # Set to on if you want to restrict outgoing traffic
+    ports:
+      - "51820:51820/udp" # WireGuard port
+    restart: unless-stopped
+    volumes:
+      - ./wireguard:/config/wireguard
+    networks:
+      - llm-network
+
+  litellm-proxy:
+    build:
+      context: ./litellm-proxy
+      dockerfile: Dockerfile
+    container_name: litellm-proxy
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - PROXY_SERVER_ID=${PROXY_SERVER_ID:-litellm-proxy-1}
+      - PG_HOST=${PG_HOST}
+      - PG_DATABASE=${PG_DATABASE}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_PORT=${PG_PORT:-5432}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      - LOGGING_LEVEL=INFO
+      - HTTP_PROXY=http://vpn:8888  # Route through VPN
+      - HTTPS_PROXY=http://vpn:8888
+    depends_on:
+      - redis
+      - vpn
+    networks:
+      - llm-network
+    volumes:
+      - ./logs:/app/logs
+
+  # Alternative option using Tailscale
+  # tailscale:
+  #   image: tailscale/tailscale:latest
+  #   container_name: tailscale
+  #   environment:
+  #     - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
+  #     - TS_STATE_DIR=/var/lib/tailscale
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - NET_RAW
+  #   volumes:
+  #     - tailscale-data:/var/lib/tailscale
+  #   networks:
+  #     - llm-network
+  #   restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: litellm-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis-data:/data
+    networks:
+      - llm-network
+
+  # Optional monitoring service
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - llm-network
+
+  # Optional monitoring dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - llm-network
+    depends_on:
+      - prometheus
+
+networks:
+  llm-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+  tailscale-data:

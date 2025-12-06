@@ -13,6 +13,8 @@ dist/
 build/
 .env
 *.log
+_ref/
+_arch/
 
 # Node
 node_modules/
